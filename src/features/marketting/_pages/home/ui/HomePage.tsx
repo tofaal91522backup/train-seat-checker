@@ -103,6 +103,9 @@ export default function HomePage() {
     });
   }, [route, bogi, seatsState]);
 
+  const bookedCount = seats.filter((seat) => seat.occupied).length;
+  const emptyCount = seats.filter((seat) => !seat.occupied).length;
+
   const handleRouteChange = (nextRoute: RouteKey) => {
     const nextBogis = getBogisByRoute(nextRoute);
     const firstBogi = nextBogis[0] ?? "";
@@ -133,13 +136,13 @@ export default function HomePage() {
   };
 
   const handleSeatClick = async (seat: SeatItem) => {
-    if (!seat.name) {
+    if (!seat.occupied) {
       setSelectedSeat(seat);
       return;
     }
 
     const confirmRemove = window.confirm(
-      `Remove ${seat.name} from seat ${seat.seat}?`,
+      `Seat ${seat.seat} থেকে ${seat.name ?? "Passenger"} কে remove করতে চান?`,
     );
 
     if (confirmRemove) {
@@ -187,50 +190,141 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 pb-32">
+    <main className="min-h-screen bg-slate-50 pb-36">
       <div className="mx-auto max-w-6xl space-y-4 p-4">
-        <div className="flex justify-between rounded-xl border bg-white p-4">
-          <div>
-            <h1 className="font-bold">Train Seat Tracker</h1>
-            <p>{route}</p>
-            <p>Train: {trainNo ?? "N/A"}</p>
+        {/* Header */}
+        <div className="rounded-2xl border bg-white p-4 shadow-sm">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-xl font-bold text-slate-900">
+                Train Seat Tracker
+              </h1>
+              <p className="text-sm text-slate-600">
+                Route:{" "}
+                <span className="font-semibold text-slate-900">{route}</span>
+              </p>
+
+              <p className="text-sm text-slate-600">
+                Selected Bogi:{" "}
+                <span className="font-semibold text-slate-900">{bogi}</span>
+              </p>
+            </div>
+
+            <Button
+              variant="destructive"
+              onClick={openResetDialog}
+              className="w-full sm:w-auto"
+            >
+              Reset Seats (only for admin)
+            </Button>
+          </div>
+        </div>
+
+        {/* Legend + summary */}
+        <div className="rounded-2xl border bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">
+            Seat Status Guide
+          </h2>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap gap-3">
+              <div className="flex items-center gap-2 rounded-full bg-green-50 px-3 py-2 text-sm font-medium text-green-700">
+                <span className="h-3 w-3 rounded-full bg-green-500" />
+                সবুজ = খালি সিট
+              </div>
+
+              <div className="flex items-center gap-2 rounded-full bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                <span className="h-3 w-3 rounded-full bg-red-500" />
+                লাল = বুকড সিট
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 text-sm">
+              <div className="rounded-full bg-slate-100 px-3 py-2 font-medium text-slate-700">
+                মোট সিট: {seats.length}
+              </div>
+              <div className="rounded-full bg-green-100 px-3 py-2 font-medium text-green-700">
+                খালি: {emptyCount}
+              </div>
+              <div className="rounded-full bg-red-100 px-3 py-2 font-medium text-red-700">
+                বুকড: {bookedCount}
+              </div>
+            </div>
           </div>
 
-          <Button variant="destructive" onClick={openResetDialog}>
-            Reset
-          </Button>
+          <p className="mt-3 text-sm text-slate-500">
+            খালি সিটে click করলে নাম যোগ হবে। বুকড সিটে click করলে remove করার
+            option আসবে।
+          </p>
         </div>
 
-        <div className="flex flex-wrap gap-2 rounded-xl border bg-white p-4">
-          {bogis.map((b) => (
-            <Button
-              key={b}
-              variant={b === bogi ? "default" : "outline"}
-              onClick={() => setBogi(b)}
-            >
-              {b}
-            </Button>
-          ))}
+        {/* Bogi selector */}
+        <div className="rounded-2xl border bg-white p-4 shadow-sm">
+          <h2 className="mb-3 text-base font-semibold text-slate-900">
+            Bogi Select করুন
+          </h2>
+
+          <div className="flex flex-wrap gap-2">
+            {bogis.map((b) => (
+              <Button
+                key={b}
+                variant={b === bogi ? "default" : "outline"}
+                onClick={() => setBogi(b)}
+                className={`min-w-[90px] font-semibold ${
+                  b === bogi ? "ring-2 ring-offset-2" : ""
+                }`}
+              >
+                Bogi {b}
+              </Button>
+            ))}
+          </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-          {seats.map((seat) => (
-            <Card
-              key={seat.seat}
-              onClick={() => handleSeatClick(seat)}
-              className={`cursor-pointer ${
-                seat.name ? "bg-red-500 text-white" : "bg-green-500 text-white"
-              }`}
-            >
-              <CardContent className="flex h-20 flex-col items-center justify-center">
-                <div>{seat.seat}</div>
-                <div>{seat.name ?? "Empty"}</div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Seat grid */}
+        <div>
+          <h2 className="mb-3 text-base font-semibold text-slate-900">
+            Seat List
+          </h2>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {seats.map((seat) => {
+              const isOccupied = seat.occupied;
+
+              return (
+                <Card
+                  key={seat.seat}
+                  onClick={() => handleSeatClick(seat)}
+                  className={`cursor-pointer border-2 transition hover:scale-[1.02] ${
+                    isOccupied
+                      ? "border-red-200 bg-red-500 text-white hover:bg-red-600"
+                      : "border-green-200 bg-green-500 text-white hover:bg-green-600"
+                  }`}
+                >
+                  <CardContent className="flex min-h-[110px] flex-col items-center justify-center gap-2 p-4 text-center">
+                    <div className="text-lg font-bold">Seat {seat.seat}</div>
+
+                    <div className="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">
+                      {isOccupied ? "Booked" : "Available"}
+                    </div>
+
+                    <div className="line-clamp-2 text-sm font-medium">
+                      {seat.name ?? "খালি আছে"}
+                    </div>
+
+                    <div className="text-xs opacity-90">
+                      {isOccupied
+                        ? "Click to remove"
+                        : "Click to add passenger"}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
         </div>
       </div>
 
+      {/* Add passenger dialog */}
       <Dialog
         open={!!selectedSeat}
         onOpenChange={(open) => {
@@ -242,22 +336,29 @@ export default function HomePage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Seat {selectedSeat?.seat}</DialogTitle>
+            <DialogTitle>
+              Seat {selectedSeat?.seat} - Passenger Add করুন
+            </DialogTitle>
           </DialogHeader>
 
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter name"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleSubmit();
-            }}
-          />
+          <div className="space-y-3">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Passenger name লিখুন"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleSubmit();
+              }}
+            />
 
-          <Button onClick={handleSubmit}>Confirm</Button>
+            <Button onClick={handleSubmit} className="w-full">
+              Confirm Booking
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
+      {/* Reset dialog */}
       <Dialog
         open={resetDialogOpen}
         onOpenChange={(open) => {
@@ -274,72 +375,100 @@ export default function HomePage() {
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="grid grid-cols-2 gap-2">
-              {routeOptions.map((item) => (
-                <Button
-                  key={item}
-                  type="button"
-                  variant={item === resetRoute ? "default" : "outline"}
-                  onClick={() => handleResetRouteChange(item)}
-                  className="h-auto whitespace-normal px-3 py-2 text-xs"
-                >
-                  {item}
-                </Button>
-              ))}
+            <p className="text-sm text-slate-500">
+              যেই route এবং bogi reset করতে চান, সেটা select করুন।
+            </p>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700">Route</p>
+              <div className="grid grid-cols-2 gap-2">
+                {routeOptions.map((item) => (
+                  <Button
+                    key={item}
+                    type="button"
+                    variant={item === resetRoute ? "default" : "outline"}
+                    onClick={() => handleResetRouteChange(item)}
+                    className="h-auto whitespace-normal px-3 py-2 text-xs"
+                  >
+                    {item}
+                  </Button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {resetBogis.map((item) => (
-                <Button
-                  key={item}
-                  type="button"
-                  variant={item === resetBogi ? "default" : "outline"}
-                  onClick={() => setResetBogi(item)}
-                >
-                  Bogi {item}
-                </Button>
-              ))}
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700">Bogi</p>
+              <div className="flex flex-wrap gap-2">
+                {resetBogis.map((item) => (
+                  <Button
+                    key={item}
+                    type="button"
+                    variant={item === resetBogi ? "default" : "outline"}
+                    onClick={() => setResetBogi(item)}
+                  >
+                    Bogi {item}
+                  </Button>
+                ))}
+              </div>
             </div>
 
-            <Input
-              type="password"
-              value={resetPassword}
-              placeholder="Admin password"
-              onChange={(e) => {
-                setResetPassword(e.target.value);
-                if (resetError) setResetError("");
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleResetSeats();
-              }}
-            />
+            <div>
+              <p className="mb-2 text-sm font-medium text-slate-700">
+                Admin Password
+              </p>
+              <Input
+                type="password"
+                value={resetPassword}
+                placeholder="Admin password"
+                onChange={(e) => {
+                  setResetPassword(e.target.value);
+                  if (resetError) setResetError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleResetSeats();
+                }}
+              />
+            </div>
 
-            {resetError ? <p className="text-red-500">{resetError}</p> : null}
+            {resetError ? (
+              <p className="text-sm font-medium text-red-500">{resetError}</p>
+            ) : null}
 
-            <Button variant="destructive" onClick={handleResetSeats}>
+            <Button
+              variant="destructive"
+              onClick={handleResetSeats}
+              className="w-full"
+            >
               Reset {resetRoute} - {resetBogi}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
+      {/* Bottom route nav */}
       <div className="supports-[backdrop-filter]:bg-white/80 fixed bottom-0 left-0 right-0 z-30 border-t bg-white/95 backdrop-blur">
-        <div className="mx-auto grid max-w-6xl grid-cols-3 gap-2 p-2 sm:grid-cols-6">
-          {routeOptions.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => handleRouteChange(r)}
-              className={`rounded-xl px-2 py-2 text-center text-[11px] font-medium transition sm:text-xs ${
-                route === r
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-slate-100 text-slate-700"
-              }`}
-            >
-              <span className="block sm:hidden">{getShortRouteLabel(r)}</span>
-              <span className="hidden sm:block">{r}</span>
-            </button>
-          ))}
+        <div className="mx-auto max-w-6xl p-2">
+          <p className="mb-2 text-center text-xs font-medium text-slate-500">
+            Route Select করুন
+          </p>
+
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {routeOptions.map((r) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => handleRouteChange(r)}
+                className={`rounded-xl border px-2 py-3 text-center text-[11px] font-semibold transition sm:text-xs ${
+                  route === r
+                    ? "border-primary bg-primary text-primary-foreground shadow"
+                    : "border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                <span className="block sm:hidden">{getShortRouteLabel(r)}</span>
+                <span className="hidden sm:block">{r}</span>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </main>
